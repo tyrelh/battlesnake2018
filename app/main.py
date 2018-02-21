@@ -40,6 +40,7 @@ def static(path):
 # respond on /start
 @bottle.post('/start')
 def start():
+    """Respond to /start from the game server"""
     global game_id, board_width, board_height, survival_min
     data = bottle.request.json
     print('STARTING NEW GAME.')
@@ -69,9 +70,9 @@ def start():
     }
 
 
-# respond on /move
 @bottle.post('/move')
 def move():
+    """Respond to /move from the game server."""
     global direction, directions, board_height, board_width, game_id, health, turn, my_id
     data = bottle.request.json
     start_time = time.time()
@@ -111,8 +112,8 @@ def move():
     }
 
 
-# seek closest food
 def hungry(data):
+    """Seek food and return the next move to the closest reachable one."""
     if status: print('HUNGRY! SEEKING FOOD.')
     grid = build_map(data)
     target = closest_food(grid, data)
@@ -123,8 +124,8 @@ def hungry(data):
     return move
 
 
-# follow own tail to kill time
 def kill_time(data):
+    """Seek own tail and return the next move"""
     if status: print('COOL. KILLING TIME.')
     grid = build_map(data)
     tail = get_tail(data)
@@ -134,6 +135,7 @@ def kill_time(data):
 
 # target edible enemy head
 def hunt(data):
+    """Seek enemy kill zones and return next move to the closest reachable one."""
     if status: print('ON THE HUNT! SEEKING ENEMY HEAD.')
     grid = build_map(data)
     target = get_enemy_head(grid, data)
@@ -144,44 +146,42 @@ def hunt(data):
     return move
 
 
-# return map array
 def build_map(data):
+    """Build and return grid of integers representing each space on the game map using the json data
+    provided by the game server."""
     global my_id, board_height, board_width
     if status: print('BUILDING MAP...')
     my_length = data['you']['length']
     # create map and fill with SPACEs
     grid = [ [SPACE for col in range(data['height'])] for row in range(data['width'])]
     turn = data['turn']
-    # fill in food locations
+    # fill in FOOD locations
     for food in data['food']['data']:
         grid[food['x']][food['y']] = FOOD
     # fill in snake locations
     for snake in data['snakes']['data']:
+        # mark SNAKE_BODY segments
         for segment in snake['body']['data']:
-            # get each segment from data {snakes, data, body, data}
             grid[segment['x']][segment['y']] = SNAKE_BODY
-        # mark snake head locations
-        #if debug: print('Snake id = ' + str(snake['id']))
-        #if debug: print('My id = ' + str(my_id))
-        # mark tails as empty spaces only after turn 3
         if debug:
             if snake['id'] == my_id:
                 print('-1 body seg: ' + str(snake['body']['data'][-1]['x']) + ',' + str(snake['body']['data'][-1]['y']))
                 print('-2 body seg: ' + str(snake['body']['data'][-2]['x']) + ',' + str(snake['body']['data'][-2]['y']))
-        #if turn > 3:
+        # check if tail location should be marked as SNAKE_BODY or SPACE
         if snake['body']['data'][-1] != snake['body']['data'][-2]:
             tempX = snake['body']['data'][-1]['x']
             tempY = snake['body']['data'][-1]['y']
             grid[tempX][tempY] = SPACE
-        # dont mark own head or own danger zones
+        # dont mark own head or own DANGER zones
         if snake['id'] == my_id: continue
+        # mark snake head location
         head = get_coords(snake['body']['data'][0])
         grid[head[0]][head[1]] = ENEMY_HEAD
-        # mark danger locations around enemy head
-        # check down from head
+        # mark danger or kill zone locations around enemy head depending on snake length
         head_zone = DANGER
         if snake['length'] < my_length:
             head_zone = KILL_ZONE
+         # check down from head
         if (head[1] + 1 < board_height):
             if grid[head[0]][head[1] + 1] < head_zone:
                 grid[head[0]][head[1] + 1] = head_zone
@@ -197,14 +197,13 @@ def build_map(data):
         if (head[0] + 1 < board_width):
             if grid[head[0] + 1][head[1]] < head_zone:
                 grid[head[0] + 1][head[1]] = head_zone
-    # mark my head location
-    #grid[data['you']['body']['data'][0]['x']][data['you']['body']['data'][0]['y']] = 1
     #if debug: print_map(grid)
     return grid
 
 
-# astar search, returns move that moves closest to destination
 def astar(data, grid, destination, mode):
+    """A* pathfinding algorithm that will find shortest path from current head location to a given
+    destination and return the next optimal move towards that goal."""
     global debug
     if debug:
         print("map:")
@@ -303,6 +302,7 @@ def astar(data, grid, destination, mode):
             print("astar grid after search failure:")
             print_f_scores(search_scores)
 
+        # TESTING
         move = 2
         if mode == 'food' or mode == 'enemy_head':
             tail = get_tail(data)
@@ -311,8 +311,8 @@ def astar(data, grid, destination, mode):
         return best_move(move, data, grid)
 
 
-# return direction from a to b
 def calculate_direction(a, b, grid, data):
+    """Return direction from a to b"""
     if status: print('CALCULATING NEXT MOVE...')
     x = a[0] - b[0]
     y = a[1] - b[1]
@@ -338,8 +338,10 @@ def calculate_direction(a, b, grid, data):
     return direction
 
 
-# out of the 3 possible moves, return the best one
 def best_move(reccommended_move, data, grid):
+    """Decides best move based on available space in if move taken, whether the move space contains own
+    tail, if the next space is KILL_ZONE, SPACE, or DANGER, and also prioritizes a reccommended move
+    passed as an argument. Returns best move."""
     global board_height, board_width
     if status: print('CHECKING FOR BEST MOVE...')
     # directions = ['up', 'left', 'down', 'right']
@@ -415,7 +417,7 @@ def best_move(reccommended_move, data, grid):
             print('GAME OVER')
         return reccommended_move # suicide
 
-    # if a kill move exists, pick the best one
+    # if a KILL_ZONE move exists, pick the best one
     if kill_moves:
         # if all moves are kill moves, take reccommended move
         if len(kill_moves) >= 3 and reccommended_move in kill_moves:
@@ -441,7 +443,7 @@ def best_move(reccommended_move, data, grid):
                 best_move = move
         return best_move
 
-    # if a non-DANGER move exists, calculate the best one
+    # if a SPACE move exists, calculate the best one
     elif reg_moves:
         # if ALL moves are reg, take reccommended move
         if status: print(str(len(reg_moves)) + ' VIABLE move(s) exist!')
@@ -494,8 +496,9 @@ def best_move(reccommended_move, data, grid):
         return reccommended_move # suicide
 
 
-# calculates number of cells accessable given a move
 def look_ahead(move, grid, data):
+    """Calculates and returns the area available on current game from current location using a
+    given move."""
     # directions = ['up', 'left', 'down', 'right']
     # test_grid = None
     # if debug:
@@ -576,9 +579,9 @@ def look_ahead(move, grid, data):
     return area
 
 
-# return if the area enclosed by the given move includes own tail
-# function copied from look_ahead. May contain erroneous comments
 def move_contains_tail(move, grid, data):
+    """Returns if the area enclosed by a given move contains your own tail.
+    Copied from look_ahead, needs refactoring/optimization."""
     # directions = ['up', 'left', 'down', 'right']
     if status: print('CHECKING IF MOVE CONTAINS TAIL...')
     tail = get_coords(data['you']['body']['data'][-1])
@@ -652,10 +655,9 @@ def move_contains_tail(move, grid, data):
     return contains_tail
 
 
-# check if move in direction will kill you
-# return True if valid
-# return False if it will kill you
 def valid_move(d, grid, data):
+    """Returns if the given move is a valid move or not.
+    ie not a wall or other snake body."""
     global board_height, board_width
     current = current_location(data)
     if status: print('CHECKING IF MOVE IS VALID!')
@@ -709,23 +711,23 @@ def valid_move(d, grid, data):
     return True
 
 
-# return manhattan distance between a and b
 def get_distance(a, b):
+    """Return manhattan distance between a and b."""
     return (abs(a[0] - b[0]) + abs(a[1] - b[1]))
 
 
-# convert object yx to list yx
 def get_coords (o):
+    """Convert point JSON to an x,y list."""
     return (o['x'], o['y'])
 
 
-# return x,y coords of current head location
 def current_location(data):
+    """Return x,y coords of current head location."""
     return (data['you']['body']['data'][0]['x'], data['you']['body']['data'][0]['y'])
 
 
-# return coords of closest food to head
 # def closest_food(data):
+#     """Return x,y coords of closest food to head using JSON game data."""
 #     current = current_location(data)
 #     shortest_distance = -1
 #     closest_food = None
@@ -743,8 +745,8 @@ def current_location(data):
 #                 closest_food = food
 #     return closest_food
 
-# return coords of closest food to head, using grid
 def closest_food(grid, data):
+    """Return x,y coords of closest FOOD to head using grid data."""
     my_location = current_location(data)
     close_food = None
     close_distance = 9999
@@ -760,6 +762,7 @@ def closest_food(grid, data):
 
 
 def get_enemy_head(grid, data):
+    """Return x,y coords of closest KILL_ZONE to head using grid data."""
     my_location = current_location(data)
     close_kill_zone = None
     close_kill_distance = 9999
@@ -774,8 +777,8 @@ def get_enemy_head(grid, data):
     return close_kill_zone
 
 
-# return coords to own tail
 def get_tail(data):
+    """Return x,y coords to own tail."""
     body = data['you']['body']['data']
     tail = current_location(data)
     for segment in body:
@@ -783,8 +786,9 @@ def get_tail(data):
     return tail
 
 
-# return grid of empty Cells for astar search data
 def build_astar_grid(data, grid):
+    """Return a grid the same size as the game board or empty Cell objects for use in the
+    A* pathfinding algorithm."""
     w = data['width']
     h = data['height']
     astar_grid = [ [Cell(row, col) for col in range(h)] for row in range(w)]
@@ -796,6 +800,7 @@ def build_astar_grid(data, grid):
 
 # the cell class for storing a* search information
 class Cell:
+    """The Cell object will store the A* search algorithm scores for finding an optimal path."""
     global board_height, board_width
     def __init__(self, x, y):
         self.f = 0
@@ -816,9 +821,8 @@ class Cell:
             self.neighbors.append([self.x, self.y - 1])
 
 
-# print whole map
 def print_map(grid):
-    #global board_height, board_width
+    """Print a 2D grid to the console."""
     w = len(grid)
     h = len(grid[0])
     for i in range(h):
@@ -828,8 +832,8 @@ def print_map(grid):
         print(line)
 
 
-# will print f scores of the astar grid of cell data
 def print_f_scores(astar_grid):
+    """Print f scores from A* search for each grid location to the console."""
     w = len(astar_grid)
     h = len(astar_grid[0])
     for i in range(h):
@@ -839,8 +843,8 @@ def print_f_scores(astar_grid):
         print(line)
 
 
-# returns if you are not the biggest snake
 def biggest(data):
+    """Returns if your snake is the biggest or not."""
     my_id = data['you']['id']
     my_length = data['you']['length']
     longest_length = 0
@@ -853,8 +857,8 @@ def biggest(data):
     return True
 
 
-# will return the minimum health required to keep alive
 def set_health_min(data):
+    """Will return the minimum health to stay alive based on the board size."""
     health_board = max(board_height, board_width) * 2
     health_length = data['you']['length']
     if health_length > health_board:
