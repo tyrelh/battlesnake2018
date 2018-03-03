@@ -2,15 +2,15 @@ import bottle
 import os
 import time
 
-debug = False
-status = False
+debug = True
+status = True
 theme = 'orange' # blue or orange
 # board variables
 SPACE = 0
 KILL_ZONE = 1
 FOOD = 2
 #MY_HEAD = 3
-DANGER = 
+DANGER = 3
 SNAKE_BODY = 4
 ENEMY_HEAD = 5
 #WALL = 7
@@ -65,8 +65,8 @@ def start():
         'head_url': head_url,
         'name': 'Zero_Cool',
         'taunt': 'So cool fam.',
-        #'head_type': 'bender',
-        #'tail_type': 'freckled'
+        'head_type': 'dead',
+        'tail_type': 'round-bum'
     }
 
 
@@ -93,7 +93,7 @@ def move():
         direction = hungry(data)
     # if you are the biggest snake
     elif biggest(data):
-        taunt = "You're cool."
+        taunt = "You're coolBBB."
         direction = hunt(data)
     # if all is well
     else:
@@ -103,7 +103,7 @@ def move():
     if status:
         print('REMAINING HEALTH IS ' + str(health) + ' ON TURN ' + str(turn) + '.')
         print('SENDING MOVE: ' + str(directions[direction]))
-    end_time = time.time(
+    end_time = time.time()
     print('Time for move was ' + str((end_time - start_time) * 1000.0) + 'ms')
     # return next move
     return {
@@ -800,7 +800,8 @@ def build_astar_grid(data, grid):
 
 # the cell class for storing a* search information
 class Cell:
-    """The Cell object will store the A* search algorithm scores for finding an optimal path."""
+    """The Cell object will store the A* search algorithm scores for each space of the game
+    board for finding an optimal path."""
     global board_height, board_width
     def __init__(self, x, y):
         self.f = 0
