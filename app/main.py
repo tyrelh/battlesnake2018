@@ -4,7 +4,7 @@ import time
 
 debug = True
 status = True
-theme = 'orange' # blue or orange
+theme = 'blue' # blue or orange
 # board variables
 SPACE = 0
 KILL_ZONE = 1
