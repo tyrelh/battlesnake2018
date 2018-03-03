@@ -93,7 +93,7 @@ def move():
         direction = hungry(data)
     # if you are the biggest snake
     elif biggest(data):
-        taunt = "You're coolBBB."
+        taunt = "You're cool."
         direction = hunt(data)
     # if all is well
     else:
