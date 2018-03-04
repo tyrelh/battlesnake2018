@@ -2,8 +2,8 @@ import bottle
 import os
 import time
 
-debug = True
-status = True
+debug = False
+status = False
 theme = 'blue' # blue or orange
 # board variables
 SPACE = 0
