@@ -325,7 +325,7 @@ def calculate_direction(a, b, grid, data):
     elif y < 0:
         direction = 2
     count = 0
-    if not valid_move(direction, grid, data):
+    while not valid_move(direction, grid, data):
         if count == 3:
             if status:
                 print('DEAD END, NO VALID MOVE REMAINING!')
