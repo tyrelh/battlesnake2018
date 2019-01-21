@@ -186,11 +186,11 @@ def build_map(data):
             if grid[head[0]][head[1] + 1] < head_zone:
                 grid[head[0]][head[1] + 1] = head_zone
         # check up from head
-        if (head[1] - 1 > 0):
+        if (head[1] - 1 >= 0):
             if grid[head[0]][head[1] - 1] < head_zone:
                 grid[head[0]][head[1] - 1] = head_zone
         # check left from head
-        if (head[0] - 1 > 0):
+        if (head[0] - 1 >= 0):
             if grid[head[0] - 1][head[1]] < head_zone:
                 grid[head[0] - 1][head[1]] = head_zone
         # check right from head
